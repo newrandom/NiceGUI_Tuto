@@ -36,9 +36,10 @@ class FunctionClass():
                         if rows:
                             query_cols = [cur.description[i][0] for i in range(len(cur.description))]
                             df = pd.DataFrame(rows, columns = query_cols)
-                            ui.notify(f"{len(rows)} 데이터를 가져왔습니다.")
-            except (Exception, psycopg2.DatabaseError) as error:
-                ui.notify(error)
+            except psycopg2.DatabaseError as db_error:
+                ui.notify(f"Database error: {db_error}")
+            except Exception as e:
+                ui.notify(f"Unexpected error: {e}")
             finally:
                 return df
         else:
@@ -48,7 +49,7 @@ class FunctionClass():
     # Table에 데이터 넣기
     def setTable(self, target_table:ui.table, source_df:pd.DataFrame) -> None:
         target_table.columns = [
-            {'name': col, 'label':col, 'field':col} for col in source_df.columns
+            {'name': col, 'label':col, 'field':col, 'sortable':True} for col in source_df.columns
         ]
         target_table.rows = source_df.to_dict(orient='records')
         
@@ -63,3 +64,15 @@ class FunctionClass():
         if len(labelList) == len(target_table.columns):
             for i in range(len(target_table.columns)):
                 target_table.columns[i]['label'] = labelList[i]
+
+    # simple Query Execute
+    def queryExecute(self, query):
+        try:
+            with psycopg2.connect(**load_config()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    conn.commit()
+        except psycopg2.DatabaseError as db_error:
+            ui.notify(f"Database error: {db_error}")
+        except Exception as e:
+            ui.notify(f"Unexpected error: {e}")

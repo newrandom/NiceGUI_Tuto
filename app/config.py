@@ -10,7 +10,7 @@ def load_config(filename='../database.ini', section='postgresql_mac'):
         for param in params:
             config[param[0]] = param[1]
     else:
-        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+        raise Exception(f'Section {section} not found in the {filename} file')
     return config
 
 if __name__ == '__main__':

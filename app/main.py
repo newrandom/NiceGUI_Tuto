@@ -1,9 +1,12 @@
 # main page > button > sql 에서 data 가져오기 > table 로 나타내기
-from FunctionCollection import *
 from fastapi import Request
 from starlette.responses import HTMLResponse
 from nicegui.page import page
 from nicegui import Client
+
+from FunctionCollection import *
+# from pages.detail import detailActor
+from pages import actors_film, detail, devPage
 
 fc = FunctionClass()
 
@@ -17,7 +20,12 @@ def mainPage():
         btnConTest = ui.button("DB접속 테스트", on_click=fc.dbConResult)
         btnGetData = ui.button("DB데이터 가져오기")
         btnResetData = ui.button("테이블 초기화")
+        btnDev = ui.button("개발 페이지로 이동", on_click = lambda:ui.navigate.to('/dev'))
     
+    ui.separator()
+    with ui.row(), ui.card():
+        # ui.textarea("이름 : ", placeholder="이름을 입력해주세요", )
+        lastNameInput = ui.input("이름 : ", placeholder="이름을 입력해주세요",)
     ui.separator()
 
     # table 생성
@@ -25,7 +33,11 @@ def mainPage():
 
     ## 버튼 생성 > 테이블생성 > 버튼에서 클릭 이벤트 발생 시 테이블에 데이터 생성하기
     def getDataEvent() -> None:
-        select_query = "select actor_id , first_name, last_name, to_char(last_update,'yyyy-mm-dd hh24:mi:ss') last_update from actor"
+        select_query = "select actor_id , last_name, first_name, to_char(last_update,'yyyy-mm-dd hh24:mi:ss') last_update from actor "
+        if lastNameInput.value != "":
+            select_query += f"where last_name like  '%{lastNameInput.value}%' "
+
+        select_query += "order by actor_id"
         df = fc.loadData(select_query)
         try:
             fc.setTable(dataTable,df)
@@ -34,26 +46,28 @@ def mainPage():
             #     <q-td :props="props">
             #         <a :href="'detail/'+props.value">{{ props.value }}</a>
             #     </q-td>
-            # """)
+            # """
             dataTable.add_slot('body-cell', """
                 <q-td :props="props">
                     <a :href="'detail/'+props.row.actor_id">{{ props.value }}</a>
                 </q-td>
             """)
-            transList = ['배우ID', '이름','성','최근수정일']
-            fc.queryColumnLabel(dataTable, transList )
-        except (Exception) as e:
-            print(e)
+            transList = ['배우ID', '성', '이름', '최근수정일']
+            fc.queryColumnLabel(dataTable, transList)
+        except psycopg2.DatabaseError as db_error:
+            print(f"Database error: {db_error}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
     btnGetData.on_click(getDataEvent)
 
     # 초기화버튼 이벤트 연결
     btnResetData.on_click(lambda:fc.resetTable(dataTable))
 
-@ui.page('/detail/{actor_id}')
-def detailPage(actor_id:int):
-    ui.label(f"Detail Page {actor_id}")
-    ui.button('이전페이지로', on_click=lambda:ui.navigate.back())
+# @ui.page('/detail/{actor_id}')
+# def detailPage(actor_id:int):
+#     ui.label(f"Detail Page {actor_id}")
+#     ui.button('이전페이지로', on_click=lambda:ui.navigate.back())
 
 # https://github.com/zauberzeug/nicegui/discussions/883
 @app.exception_handler(404)
@@ -84,7 +98,8 @@ async def custom_404_handler(request: Request, exception:Exception):
 #                 ui.markdown(msg_to_user).classes("message")
 #     return client.build_response(request, 500)
 
-# 프로그램 실행
-app.native.window_args['resizable'] = False
-app.native.settings['ALLOW_DOWNLOADS'] = False
-ui.run(native=True, window_size=(1000,800), language='ko-KR', title='DB 연동 테스트' )
+if __name__ in  ('__main__', '__mp_main__'):
+    # 프로그램 실행
+    app.native.window_args['resizable'] = False
+    app.native.settings['ALLOW_DOWNLOADS'] = False
+    ui.run(native=True, window_size=(900, 700), language='ko-KR', title='DB 연동 테스트' )
