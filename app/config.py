@@ -1,6 +1,20 @@
 from configparser import ConfigParser
+import platform
+from typing import Callable
 
-def load_config(filename='../database.ini', section='postgresql_mac'):
+def checkMyOS() -> str:
+    OS_NAME = platform.system()
+
+    if OS_NAME == "Windows":
+        os_section = 'postgresql_win'
+    elif OS_NAME == "Darwin":
+        os_section = 'postgresql_mac'
+    else:
+        os_section = 'postgresql_linux'
+    return os_section
+
+def load_config(filename='../database.ini', section_func: Callable[[], str] = checkMyOS):
+    section = section_func()
     parser = ConfigParser()
     parser.read(filename)
     # get section, default to postgresql
